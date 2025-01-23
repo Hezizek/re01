@@ -1,0 +1,55 @@
+<html>
+  <head>
+    <script type="text/javascript">
+      let my_target, my_component_array;
+
+      async function draw_canvas() {
+        my_target.begin_draw();
+        my_target.do_draw(my_component_array);
+        my_target.end_draw();
+        requestAnimationFrame(draw_canvas);
+      }
+
+      async function init_draw() {
+        // 获取 Canvas 元素
+        const canvas = document.getElementById("my_canvas");
+
+        // 动态调整 Canvas 尺寸的函数
+        function resize_canvas() {
+          const devicePixelRatio = window.devicePixelRatio || 1;
+          canvas.width = canvas.clientWidth * devicePixelRatio;
+          canvas.height = canvas.clientHeight * devicePixelRatio;
+        }
+
+        // 初始化时设置 Canvas 尺寸
+        resize_canvas();
+
+        // 监听窗口大小变化，动态调整 Canvas 尺寸
+        window.addEventListener("resize", resize_canvas);
+
+        // 批量动态导入模块
+        const [webgpuModule, targetModule, renderModule] = await Promise.all([
+          import("./webgpu.js"),
+          import("./target.js"),
+          import("./render.js"),
+        ]);
+
+        // 初始化各模块
+        const my_webgpu = await webgpuModule.create_webgpu("my_canvas");
+        my_target = await targetModule.create_target(my_webgpu);
+
+        const my_render = await renderModule.create_render(my_webgpu, {
+          shader_url: "./shader.wgsl",
+        });
+        const my_part = await my_render.create_part({});
+        my_component_array = [await my_part.create_component()];
+
+        draw_canvas();
+      }
+    </script>
+  </head>
+
+  <body onload="init_draw();">
+    <canvas id="my_canvas" style="width: 100%; height: 100%;"></canvas>
+  </body>
+</html>
